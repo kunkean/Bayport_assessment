@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  redis:
+    image: local_ALFRED/BATCAVE
+    deploy:
+      replicas: 1
+    secrets:
+      - my_secret
+      secrets:
+  my_secret:
+    file: ./my_secret.txt
+  my_other_secret:
+    external: true

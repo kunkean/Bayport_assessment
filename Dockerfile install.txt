@@ -1,0 +1,45 @@
+#!/bin/bash
+sudo apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get update
+sudo apt-get install -y docker-ce
+ sudo docker run -d --name ALFRED local_ALFRED/BATCAVE
+# Linux post-install
+sudo groupadd docker
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+
+FROM mariadb:latest as builder
+
+# That file does the DB initialization but also runs mysql daemon, by removing the last line it will only init
+RUN ["sed", "-i", "s/exec \"$@\"/echo \"not running $@\"/", "/usr/local/bin/docker-entrypoint.sh"]
+
+# needed for intialization
+ENV MYSQL_ROOT_PASSWORD=root
+
+COPY setup.sql /docker-entrypoint-initdb.d/
+
+# Need to change the datadir to something else that /var/lib/mysql because the parent docker file defines it as a volume.
+RUN ["/usr/local/bin/docker-entrypoint.sh", "mysqld", "--datadir", "/initialized-db", "--aria-log-dir-path", "/initialized-db"]
+
+FROM mariadb:latest
+
+COPY --from=builder /initialized-db /var/lib/mysql
+
+CREATE DATABASE wayneindustries;
+
+USE wayneindustries;
+
+CREATE TABLE FOX (myfield VARCHAR(20));
+
+INSERT INTO FOX (ID, Name);
+VALUES ("50", "BATMOBILE");

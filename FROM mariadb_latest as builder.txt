@@ -1,0 +1,25 @@
+FROM mariadb:latest as builder
+
+# That file does the DB initialization but also runs mysql daemon, by removing the last line it will only init
+RUN ["sed", "-i", "s/exec \"$@\"/echo \"not running $@\"/", "/usr/local/bin/docker-entrypoint.sh"]
+
+# needed for intialization
+ENV MYSQL_ROOT_PASSWORD=root
+
+COPY setup.sql /docker-entrypoint-initdb.d/
+
+# Need to change the datadir to something else that /var/lib/mysql because the parent docker file defines it as a volume.
+RUN ["/usr/local/bin/docker-entrypoint.sh", "mysqld", "--datadir", "/initialized-db", "--aria-log-dir-path", "/initialized-db"]
+
+FROM mariadb:latest
+
+COPY --from=builder /initialized-db /var/lib/mysql
+
+CREATE DATABASE wayneindustries;
+
+USE wayneindustries;
+
+CREATE TABLE FOX (myfield VARCHAR(20));
+
+INSERT INTO FOX (ID, Name);
+VALUES ("50", "BATMOBILE");
